@@ -33,7 +33,7 @@ async fn watch_changes(client: Client) -> Result<()> {
 
     // Watch for changes in ingress
     watcher(ingress_api, watcher::Config::default())
-        .applied_objects()
+        .touched_objects()
         .try_for_each(|p| async move {
             println!("Applied: {}", p.name_any());
 

@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cert-fixer
+  labels:
+    app: cert-fixer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cert-fixer
+  template:
+    metadata:
+      labels:
+        app: cert-fixer
+    spec:
+      serviceAccountName: cert-fixer-account
+      containers:
+      - name: cert-fixer
+        image: alexohneander/cert-fixer:latest
