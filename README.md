@@ -16,5 +16,5 @@ The **cert-fixer** is configured via environment variables. The following variab
 | Variable | Description | Default |
 | --- | --- | --- |
 | ÌNGRESS_CONTROLLER_SERVICE | The name of the Ingress Controller Service | ingress-contour-envoy.projectcontour.svc.cluster.local |
-|
+
 
