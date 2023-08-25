@@ -1,4 +1,4 @@
-use futures_util::{TryStreamExt};
+use futures_util::TryStreamExt;
 use k8s_openapi::api::{
     core::v1::{ConfigMap, Pod},
     networking::v1::Ingress,
