@@ -1,3 +1,27 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-fixer
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cert-fixer-account
+  namespace: cert-fixer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cert-fixer-admin-sa-crb
+subjects:
+  - kind: ServiceAccount
+    name: cert-fixer-account
+    namespace: cert-fixer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
