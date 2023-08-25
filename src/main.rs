@@ -1,6 +1,14 @@
-use k8s_openapi::api::{networking::v1::Ingress, core::v1::{ConfigMap, Pod}};
-use kube::{Client, Api, api::{ListParams, Patch}};
+use futures_util::{TryStreamExt};
+use k8s_openapi::api::{
+    core::v1::{ConfigMap, Pod},
+    networking::v1::Ingress,
+};
+use kube::{
+    api::{ListParams, Patch},
 
+    runtime::{watcher, WatchStreamExt},
+    Api, Client, ResourceExt,
+};
 
 type Result<T, E = anyhow::Error> = std::result::Result<T, E>;
 
@@ -10,7 +18,36 @@ const COMMENT_LINE_SUFFIX: &str = " # Added by cert-fixer";
 #[tokio::main]
 async fn main() -> Result<()> {
     let client = Client::try_default().await?;
-    
+
+    // Start infinity loop to watch changes
+    loop {
+        watch_changes(client.to_owned()).await?;
+    }
+
+    Ok(())
+}
+
+async fn watch_changes(client: Client) -> Result<()> {
+    // Watch for changes in ingress
+    let ingress_api: Api<Ingress> = Api::all(client.to_owned());
+
+    watcher(ingress_api, watcher::Config::default())
+        .applied_objects()
+        .try_for_each(|p| async move {
+            println!("Applied: {}", p.name_any());
+
+            let _ = update_corefile().await;
+
+            Ok(())
+        })
+        .await?;
+
+    Ok(())
+}
+
+async fn update_corefile() -> Result<()> {
+    let client = Client::try_default().await?;
+
     // Save ingress hostnames in a vector
     let hostnames = get_hostnames_from_ingresses(client.to_owned()).await?;
     println!("Hostnames: {:?}", hostnames);
@@ -67,10 +104,13 @@ async fn add_hostnames_to_config_map(client: Client, hostnames: Vec<String>) -> 
         } else {
             index += 1;
         }
-    } 
+    }
 
     for hostname in hostnames {
-        let rewrite_rule = format!("    rewrite name {} {}  {}r", hostname, INGRESS_CONTROLLER, COMMENT_LINE_SUFFIX);
+        let rewrite_rule = format!(
+            "    rewrite name {} {}  {}",
+            hostname, INGRESS_CONTROLLER, COMMENT_LINE_SUFFIX
+        );
         corefile_lines.insert(index + 1, rewrite_rule);
 
         index += 1;
@@ -100,19 +140,25 @@ async fn patch_corefile_in_config_map(client: Client, corefile_new: String) -> R
         ..Default::default()
     });
 
-    let patch = config_api.patch("coredns", &Default::default(), &patchdata).await?;
+    let patch = config_api
+        .patch("coredns", &Default::default(), &patchdata)
+        .await?;
     let _patch = Patch::Apply(patch);
 
     Ok(())
 }
-    
+
 async fn restart_coredns(client: Client) -> Result<()> {
     let pod_api: Api<Pod> = Api::namespaced(client.to_owned(), "kube-system");
-    let pods = pod_api.list(&ListParams::default().labels("k8s-app=kube-dns")).await?;
+    let pods = pod_api
+        .list(&ListParams::default().labels("k8s-app=kube-dns"))
+        .await?;
 
     for pod in pods.items {
         println!("Restarting CoreDNS");
-        pod_api.delete(&pod.metadata.name.unwrap(), &Default::default()).await?;
+        pod_api
+            .delete(&pod.metadata.name.unwrap(), &Default::default())
+            .await?;
     }
 
     Ok(())
