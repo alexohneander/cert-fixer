@@ -1,11 +1,11 @@
-use std::collections::HashMap;
 use k8s_openapi::api::{networking::v1::Ingress, core::v1::{ConfigMap, Pod}};
 use kube::{Client, Api, api::{ListParams, Patch}};
 
 
 type Result<T, E = anyhow::Error> = std::result::Result<T, E>;
 
-const INGRESSCONTROLLER: &str = "ingress-contour-envoy.projectcontour.svc.cluster.local";
+const INGRESS_CONTROLLER: &str = "ingress-contour-envoy.projectcontour.svc.cluster.local";
+const COMMENT_LINE_SUFFIX: &str = " # Added by cert-fixer";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,7 +17,6 @@ async fn main() -> Result<()> {
 
     // Add hostnames to coredns config map
     let new_corefile = add_hostnames_to_config_map(client.to_owned(), hostnames).await?;
-    println!("Corefile new: {}", &new_corefile);
 
     // Patch config map with new corefile
     patch_corefile_in_config_map(client.to_owned(), new_corefile).await?;
@@ -57,6 +56,10 @@ async fn add_hostnames_to_config_map(client: Client, hostnames: Vec<String>) -> 
 
     // add hostnames to corefile after ".:53 {" line
     let mut corefile_lines: Vec<String> = corefile.split("\n").map(|s| s.to_string()).collect();
+
+    // Clean up corefile_lines
+    corefile_lines.retain(|x| !x.contains(COMMENT_LINE_SUFFIX));
+
     let mut index = 0;
     for line in corefile_lines.iter() {
         if line.contains(".:53 {") {
@@ -67,7 +70,7 @@ async fn add_hostnames_to_config_map(client: Client, hostnames: Vec<String>) -> 
     } 
 
     for hostname in hostnames {
-        let rewrite_rule = format!("    rewrite name {} {}", hostname, INGRESSCONTROLLER);
+        let rewrite_rule = format!("    rewrite name {} {}  {}r", hostname, INGRESS_CONTROLLER, COMMENT_LINE_SUFFIX);
         corefile_lines.insert(index + 1, rewrite_rule);
 
         index += 1;
@@ -98,14 +101,11 @@ async fn patch_corefile_in_config_map(client: Client, corefile_new: String) -> R
     });
 
     let patch = config_api.patch("coredns", &Default::default(), &patchdata).await?;
-    let patch = Patch::Apply(patch);
+    let _patch = Patch::Apply(patch);
 
-        
     Ok(())
 }
     
-
-
 async fn restart_coredns(client: Client) -> Result<()> {
     let pod_api: Api<Pod> = Api::namespaced(client.to_owned(), "kube-system");
     let pods = pod_api.list(&ListParams::default().labels("k8s-app=kube-dns")).await?;
@@ -117,4 +117,3 @@ async fn restart_coredns(client: Client) -> Result<()> {
 
     Ok(())
 }
-
