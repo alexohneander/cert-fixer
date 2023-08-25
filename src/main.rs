@@ -24,13 +24,14 @@ async fn main() -> Result<()> {
         watch_changes(client.to_owned()).await?;
     }
 
+    #[allow(unreachable_code)]
     Ok(())
 }
 
 async fn watch_changes(client: Client) -> Result<()> {
-    // Watch for changes in ingress
     let ingress_api: Api<Ingress> = Api::all(client.to_owned());
 
+    // Watch for changes in ingress
     watcher(ingress_api, watcher::Config::default())
         .applied_objects()
         .try_for_each(|p| async move {
