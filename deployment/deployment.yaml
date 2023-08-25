@@ -42,3 +42,6 @@ spec:
       containers:
       - name: cert-fixer
         image: alexohneander/cert-fixer:latest
+        env:
+        - name: ÌNGRESS_CONTROLLER_SERVICE
+          value: ingress-contour-envoy.projectcontour.svc.cluster.local

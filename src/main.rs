@@ -9,10 +9,9 @@ use kube::{
     runtime::{watcher, WatchStreamExt},
     Api, Client, ResourceExt,
 };
-
 type Result<T, E = anyhow::Error> = std::result::Result<T, E>;
 
-const INGRESS_CONTROLLER: &str = "ingress-contour-envoy.projectcontour.svc.cluster.local";
+
 const COMMENT_LINE_SUFFIX: &str = " # Added by cert-fixer";
 
 #[tokio::main]
@@ -82,7 +81,13 @@ async fn get_hostnames_from_ingresses(client: Client) -> Result<Vec<String>> {
     Ok(hostnames)
 }
 
+
 async fn add_hostnames_to_config_map(client: Client, hostnames: Vec<String>) -> Result<String> {
+    let ingress_controller: String = match std::env::var("ÌNGRESS_CONTROLLER_SERVICE") {
+        Ok(val) => val,
+        Err(_) => "ingress-nginx-controller.ingress-nginx.svc.cluster.local".to_string(),
+    };
+
     let config_api: Api<ConfigMap> = Api::namespaced(client.to_owned(), "kube-system");
 
     // Get config map in kube-system namespace with name coredns
@@ -110,7 +115,7 @@ async fn add_hostnames_to_config_map(client: Client, hostnames: Vec<String>) -> 
     for hostname in hostnames {
         let rewrite_rule = format!(
             "    rewrite name {} {}  {}",
-            hostname, INGRESS_CONTROLLER, COMMENT_LINE_SUFFIX
+            hostname, ingress_controller, COMMENT_LINE_SUFFIX
         );
         corefile_lines.insert(index + 1, rewrite_rule);
 
