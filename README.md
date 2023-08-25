@@ -15,6 +15,6 @@ kubectl apply -f https://raw.githubusercontent.com/alexohneander/cert-fixer/main
 The **cert-fixer** is configured via environment variables. The following variables are available:
 | Variable | Description | Default |
 | --- | --- | --- |
-| ÌNGRESS_CONTROLLER_SERVICE | The name of the Ingress Controller Service | ingress-contour-envoy.projectcontour.svc.cluster.local |
+| INGRESS_SERVICE | The name of the Ingress Controller Service | ingress-nginx-controller.ingress-nginx.svc.cluster.local |
 
 
