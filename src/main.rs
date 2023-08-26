@@ -81,7 +81,6 @@ async fn get_hostnames_from_ingresses(client: Client) -> Result<Vec<String>> {
     Ok(hostnames)
 }
 
-
 async fn add_hostnames_to_config_map(client: Client, hostnames: Vec<String>) -> Result<String> {
     let ingress_controller: String = match std::env::var("INGRESS_SERVICE") {
         Ok(val) => val,
