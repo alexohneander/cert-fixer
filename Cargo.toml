@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 kube = { version = "0.87.2", features = ["runtime", "derive"] }
-k8s-openapi = { version = "0.20.0", features = ["v1_27"] }
+k8s-openapi = { version = "0.21.0", features = ["v1_27"] }
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread", "signal"] }
 anyhow = "1.0.78"
 futures-util = "0.3.30"
